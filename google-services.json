@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "540567430247",
+    "firebase_url": "https://angeleyes-ade0e.firebaseio.com",
+    "project_id": "angeleyes-ade0e",
+    "storage_bucket": "angeleyes-ade0e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:540567430247:android:c959025cfc1a706e0d20c2",
+        "android_client_info": {
+          "package_name": "org.tensorflow.demo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "540567430247-km8jnf2pg4v6cg0a7t0v5n6b6oq95bbn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDF7W5v4q8oC0P00NUEQ7zVRIzB5xHuQZA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "540567430247-km8jnf2pg4v6cg0a7t0v5n6b6oq95bbn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

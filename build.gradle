@@ -1,0 +1,317 @@
+
+project.buildDir = 'gradleBuild'
+getProject().setBuildDir('gradleBuild')
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.5.2'
+        classpath 'org.apache.httpcomponents:httpclient:4.5.4'
+        /*****soufiane*****/
+        //classpath 'com.google.gms:google-services:4.0.2'
+        classpath 'com.google.gms:google-services:4.3.3'
+
+    }
+}
+
+allprojects {
+
+    repositories {
+        google()
+        jcenter()
+        /*mavenCentral()
+        mavenLocal()*/
+        /*****soufiane*****/
+        maven { url 'https://maven.google.com' }
+        //maven { url 'https://tokbox.bintray.com/maven' }
+    }
+}
+
+def nativeBuildSystem = 'none'
+
+def cpuType = 'armeabi-v7a'
+
+
+def nativeOutDir = 'libs/' + cpuType
+
+
+def nativeBuildRule = 'buildNativeBazel'
+def demoLibPath = 'ibtensorflow_demo.so'
+def inferenceLibPath = 'libtensorflow_inference.so'
+
+
+if (nativeBuildSystem == 'makefile') {
+    nativeBuildRule = 'buildNativeMake'
+    demoLibPath = 'libtensorflow_demo.so'
+    inferenceLibPath = 'libtensorflow_inference.so'
+}
+
+def bazelLocation = '/usr/local/bin/bazel'
+
+
+project.ext.ASSET_DIR = projectDir.toString() + '/assets'
+project.ext.TMP_DIR = project.buildDir.toString() + '/downloads'
+
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 29
+
+    if (nativeBuildSystem == 'cmake') {
+        defaultConfig {
+            applicationId = 'org.tensorflow.demo'
+            minSdkVersion 21
+            targetSdkVersion 26
+            multiDexEnabled true
+            /*****************/
+            versionCode 1
+            versionName "1.0"
+            vectorDrawables.useSupportLibrary = true
+            testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+            /*******************/
+            ndk {
+                abiFilters "${cpuType}"
+            }
+            externalNativeBuild {
+                cmake {
+                    arguments '-DANDROID_TOOLCHAIN=gcc', '-DANDROID_STL=gnustl_static'
+                    abiFilters 'armeabi-v7a', 'arm64-v8a'
+                }
+            }
+        }
+        externalNativeBuild {
+            cmake {
+                path './jni/CMakeLists.txt'
+            }
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+
+    sourceSets {
+        main {
+            if (nativeBuildSystem == 'bazel' || nativeBuildSystem == 'makefile') {
+              
+                java {
+                    srcDir '../../java/src/main/java'
+                    exclude '**/examples/**'
+                }
+
+               
+                java {
+                    srcDir '../../contrib/android/java'
+                }
+            }
+         
+            java {
+                srcDir 'src'
+            }
+
+            manifest.srcFile 'AndroidManifest.xml'
+            resources.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            renderscript.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = [project.ext.ASSET_DIR]
+            jniLibs.srcDirs = ['libs']
+        }
+
+        debug.setRoot('build-types/debug')
+        release.setRoot('build-types/release')
+    }
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 26
+    }
+}
+
+task buildNativeBazel(type: Exec) {
+    workingDir '../../..'
+    commandLine bazelLocation, 'build', '-c', 'opt', 'tensorflow/examples/android:tensorflow_native_libs', '--crosstool_top=//externa l:android/crosstool', '--cpu=' + cpuType, '--host_cross tool_top=@baz el_tools//tools/cpp:toolchain'
+}
+
+task buildNativeMake(type: Exec) {
+    environment "NDK_ROOT", android.ndkDirectory
+
+    environment "CC_PREFIX", 'ccache'
+    workingDir '../../..'
+    commandLine 'tensorflow/contrib/makefile/build_all_android.sh', '-s', 'tensorf low/c ontrib/make fi le/sub_makefiles/android/Makefile.in', '-t', 'libtens  orfl o w_inferen ce .s o libtensorflow_demo.so'  \
+         , '-T' 
+}
+
+task copyNativeLibs(type: Copy) {
+    from demoLibPath
+    from inferenceLibPath
+    into nativeOutDir
+    duplicatesStrategy = 'include'
+    dependsOn nativeBuildRule
+    fileMode 0644
+}
+
+tasks.whenTaskAdded { task ->
+    if (nativeBuildSystem == 'bazel' || nativeBuildSystem == 'makefile') {
+        if (task.name == 'assembleDebug') {
+            task.dependsOn 'copyNativeLibs'
+        }
+        if (task.name == 'assembleRelease') {
+            task.dependsOn 'copyNativeLibs'
+        }
+    }
+}
+
+
+dependencies {
+    if (nativeBuildSystem == 'none' || nativeBuildSystem == 'none') {
+        implementation 'org.tensorflow:tensorflow-android:+'
+    }
+}
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'org.tensorflow:tensorflow-android:1.13.1'
+    implementation fileTree(include: '*.jar', dir: 'libs')
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'com.google.android.gms:play-services-location:17.0.0'
+    //implementation group: 'com.googlecode.json-simple', name: 'json-simple', version: '1.1.1'
+    //implementation 'com.googlecode.json-simple:json-simple:1.1'
+
+    //implementation 'com.android.support:appcompat-v7:25.0.1'/////////////
+
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+
+    //compile 'com.github.markushi:circlebutton:1.1' /**circle button for ccall*/
+    /*compile 'cn.pedant.sweetalert:library:1.3' /**alert**/
+
+    //androidTestImplementation 'com.android.support.test:runner:1.0.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+
+    androidTestImplementation('androidx.test.espresso:espresso-core:3.2.0', {
+        exclude group: 'com.android.support', module: 'support-annotations'
+    })
+
+    //compile 'com.android.support:appcompat-v7:26.1.0'
+
+    implementation 'androidx.appcompat:appcompat:1.1.0'
+    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
+    implementation 'androidx.cardview:cardview:1.0.0'
+
+    //compile 'com.opentok.android:opentok-android-sdk:2.13.0'
+    implementation 'pub.devrel:easypermissions:0.4.0'
+    //implementation 'com.google.gms:google-services:4.3.3'
+    implementation('com.google.android.gms:play-services-base:17.1.0') { force = true }
+    implementation 'com.google.firebase:firebase-core:17.2.1'
+
+    implementation 'com.google.firebase:firebase-ml-vision:24.0.1'
+
+    implementation 'junit:junit:4.12'
+}
+
+apply plugin: 'com.google.gms.google-services'
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+    implementation 'com.google.android.material:material:1.0.0'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+    implementation 'com.android.support:design:28.0.0'
+
+    implementation 'com.loopj.android:android-async-http:1.4.9'
+    implementation 'com.googlecode.json-simple:json-simple:1.1'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:+'
+    implementation 'androidx.constraintlayout:constraintlayout:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
+
+dependencies {
+    implementation 'androidx.legacy:legacy-support-v4:+'
+}
